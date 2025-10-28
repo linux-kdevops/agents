@@ -1,0 +1,235 @@
+#!/bin/bash
+# ai-session - Manage AI collaboration sessions
+
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+AI_TRACES="$PROJECT_ROOT/.ai-traces"
+SESSIONS_LOG="$AI_TRACES/sessions.log"
+
+# Colors
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+RED='\033[0;31m'
+BLUE='\033[0;34m'
+NC='\033[0m'
+
+usage() {
+    cat <<EOF
+Usage: ai-session <command> [options]
+
+Commands:
+    start [--agent AI] [--task TYPE]  Start a new AI session
+    log <message>                      Log event to current session
+    end                                End current session
+    current                            Show current session info
+    list                               List recent sessions
+
+Examples:
+    ai-session start --agent Claude-Code --task implement
+    ai-session log "Starting Phase 2 implementation"
+    ai-session end
+    ai-session current
+
+Environment Variables:
+    AI_SESSION      Current session ID (auto-set by 'start')
+    AI_AGENT        Current AI agent name
+    AI_TASK_TYPE    Current task type
+EOF
+    exit 1
+}
+
+ensure_ai_traces() {
+    if [ ! -d "$AI_TRACES" ]; then
+        echo -e "${YELLOW}⚠ .ai-traces/ not found, creating...${NC}"
+        mkdir -p "$AI_TRACES"
+        touch "$SESSIONS_LOG"
+        echo "# AI Session Log" > "$AI_TRACES/README.md"
+        echo '{"sessions": [], "total_tokens": 0, "total_commits": 0}' > "$AI_TRACES/session-map.json"
+        echo -e "${GREEN}✓ Created .ai-traces/ directory${NC}"
+    fi
+}
+
+cmd_start() {
+    ensure_ai_traces
+
+    local agent="Claude-Code"
+    local task="implement"
+
+    # Parse arguments
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            --agent)
+                agent="$2"
+                shift 2
+                ;;
+            --task)
+                task="$2"
+                shift 2
+                ;;
+            *)
+                echo -e "${RED}Unknown option: $1${NC}"
+                usage
+                ;;
+        esac
+    done
+
+    # Generate session ID
+    SESSION_ID="$(date +%Y-%m-%d-%H%M%S)-$agent"
+
+    # Export environment variables
+    export AI_SESSION="$SESSION_ID"
+    export AI_AGENT="$agent"
+    export AI_TASK_TYPE="$task"
+
+    # Log session start
+    TIMESTAMP=$(date -Iseconds)
+    echo "[$TIMESTAMP] [$agent] [$SESSION_ID] START task=$task" >> "$SESSIONS_LOG"
+
+    # Print instructions
+    echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e "${GREEN}🤖 AI Session Started${NC}"
+    echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e "Session ID:  ${BLUE}$SESSION_ID${NC}"
+    echo -e "AI Agent:    ${BLUE}$agent${NC}"
+    echo -e "Task Type:   ${BLUE}$task${NC}"
+    echo ""
+    echo -e "${YELLOW}Export these to your shell:${NC}"
+    echo "  export AI_SESSION=\"$SESSION_ID\""
+    echo "  export AI_AGENT=\"$agent\""
+    echo "  export AI_TASK_TYPE=\"$task\""
+    echo ""
+    echo -e "${YELLOW}Or source this script:${NC}"
+    echo "  eval \"\$(ai-session start --agent $agent --task $task)\""
+    echo ""
+    echo -e "${YELLOW}Remember to use MACP format when committing!${NC}"
+    echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+
+    # Output export statements for eval
+    cat <<EOF
+export AI_SESSION="$SESSION_ID"
+export AI_AGENT="$agent"
+export AI_TASK_TYPE="$task"
+EOF
+}
+
+cmd_log() {
+    ensure_ai_traces
+
+    if [ -z "$AI_SESSION" ]; then
+        echo -e "${RED}❌ No active session. Run 'ai-session start' first.${NC}"
+        exit 1
+    fi
+
+    local message="$*"
+    if [ -z "$message" ]; then
+        echo -e "${RED}❌ Message required${NC}"
+        usage
+    fi
+
+    TIMESTAMP=$(date -Iseconds)
+    echo "[$TIMESTAMP] [$AI_AGENT] [$AI_SESSION] LOG $message" >> "$SESSIONS_LOG"
+    echo -e "${GREEN}✓${NC} Logged: $message"
+}
+
+cmd_end() {
+    ensure_ai_traces
+
+    if [ -z "$AI_SESSION" ]; then
+        echo -e "${YELLOW}⚠ No active session${NC}"
+        exit 0
+    fi
+
+    TIMESTAMP=$(date -Iseconds)
+    echo "[$TIMESTAMP] [$AI_AGENT] [$AI_SESSION] END" >> "$SESSIONS_LOG"
+
+    echo -e "${GREEN}✓ Session ended: $AI_SESSION${NC}"
+    echo -e "${YELLOW}Unset environment variables:${NC}"
+    echo "  unset AI_SESSION AI_AGENT AI_TASK_TYPE"
+}
+
+cmd_current() {
+    if [ -z "$AI_SESSION" ]; then
+        echo -e "${YELLOW}No active session${NC}"
+        echo ""
+        echo "Start one with:"
+        echo "  eval \"\$(ai-session start)\""
+        exit 0
+    fi
+
+    echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e "${GREEN}🤖 Current AI Session${NC}"
+    echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e "Session ID:  ${BLUE}$AI_SESSION${NC}"
+    echo -e "AI Agent:    ${BLUE}$AI_AGENT${NC}"
+    echo -e "Task Type:   ${BLUE}$AI_TASK_TYPE${NC}"
+    echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+}
+
+cmd_list() {
+    ensure_ai_traces
+
+    if [ ! -f "$SESSIONS_LOG" ] || [ ! -s "$SESSIONS_LOG" ]; then
+        echo -e "${YELLOW}No sessions logged yet${NC}"
+        exit 0
+    fi
+
+    echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e "${GREEN}Recent AI Sessions${NC}"
+    echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    tail -20 "$SESSIONS_LOG" | while IFS= read -r line; do
+        # Parse log line
+        timestamp=$(echo "$line" | sed -n 's/\[\([^]]*\)\].*/\1/p')
+        agent=$(echo "$line" | sed -n 's/.*\[\([^]]*\)\] \[\([^]]*\)\] \([A-Z]*\).*/\1/p')
+        session=$(echo "$line" | sed -n 's/.*\[\([^]]*\)\] \[\([^]]*\)\] \([A-Z]*\).*/\2/p')
+        event=$(echo "$line" | sed -n 's/.*\[\([^]]*\)\] \[\([^]]*\)\] \([A-Z]*\).*/\3/p')
+        details=$(echo "$line" | sed -n 's/.*\] [A-Z]* \(.*\)/\1/p')
+
+        case "$event" in
+            START)
+                echo -e "${GREEN}▶${NC} $timestamp ${BLUE}$agent${NC} started: $details"
+                ;;
+            END)
+                echo -e "${RED}◼${NC} $timestamp ${BLUE}$agent${NC} ended"
+                ;;
+            LOG)
+                echo -e "  ${YELLOW}•${NC} $timestamp $details"
+                ;;
+            COMMIT)
+                echo -e "  ${GREEN}✓${NC} $timestamp committed: $details"
+                ;;
+        esac
+    done
+    echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+}
+
+# Main command dispatch
+if [ $# -eq 0 ]; then
+    usage
+fi
+
+COMMAND=$1
+shift
+
+case "$COMMAND" in
+    start)
+        cmd_start "$@"
+        ;;
+    log)
+        cmd_log "$@"
+        ;;
+    end)
+        cmd_end "$@"
+        ;;
+    current)
+        cmd_current "$@"
+        ;;
+    list)
+        cmd_list "$@"
+        ;;
+    *)
+        echo -e "${RED}Unknown command: $COMMAND${NC}"
+        usage
+        ;;
+esac
