@@ -214,6 +214,13 @@ not its self-report. The full scheme (dual-plan generate→grade→merge loop,
 fixed rubric, git-derived ledger, fail-closed token capture) is in
 [`docs/mcp-agent-extension.md`](docs/mcp-agent-extension.md).
 
+**Wiring it up:** to connect Claude Code to Codex over MCP in the first place,
+`claude mcp add --transport stdio --scope user codex -- codex mcp-server`, then
+resume your session and check `/mcp`. Full walkthrough — including how to pick
+up the new server mid-session and how to give Codex its own MCP servers via
+`~/.codex/config.toml` — is in
+[§0 of the extension doc](docs/mcp-agent-extension.md#0-setup-wire-claude-code-to-the-codex-mcp-server).
+
 ## Thought Trace Format
 
 For complex decisions, create `.ai-traces/<session-id>.md`:

@@ -15,6 +15,61 @@ assistant) with an auditable, in-band channel.
 It was first developed and exercised in the Rush build-system project; this
 document generalizes it for any project that adopts the MACP template.
 
+## 0. Setup: wire Claude Code to the codex MCP server
+
+Before any of the trailers below can be produced, Claude Code needs a live MCP
+connection to Codex. Codex ships an MCP server (`codex mcp-server`); register
+it with Claude Code at user scope so every project can reach it:
+
+```bash
+# 1. Register Codex as an MCP server (user scope = available in all projects)
+claude mcp add --transport stdio --scope user codex -- codex mcp-server
+
+# 2. Confirm it registered
+claude mcp list
+```
+
+`claude mcp add` only updates configuration — a Claude Code session started
+*before* the server was registered will not see it. Pick up the new server in
+the session you were already working in without losing context:
+
+```
+# 3. Name the current session so you can resume it
+/rename codex-mcp-setup
+
+# 4. (Optional) shrink the context you carry across the restart
+/compact focus on the current task; drop unrelated history
+
+# 5. Exit Claude Code, then resume the named session
+```
+
+```bash
+claude --resume codex-mcp-setup
+```
+
+```
+# 6. Verify the codex server is connected and tools are exposed
+/mcp
+```
+
+`/mcp` should list `codex` as connected with its tools (e.g. `codex`,
+`codex-reply`). Once it does, the consultation flow in sections 4–5 works and
+the receipt capture in section 3 can read the rollout file.
+
+**Giving Codex its own MCP servers.** Codex can in turn consult other MCP
+servers — Claude Code → Codex → context7, for example. Configure those in
+`~/.codex/config.toml` (or `$CODEX_HOME/config.toml`):
+
+```toml
+[mcp_servers.context7]
+command = "npx"
+args = ["-y", "@upstash/context7-mcp"]
+```
+
+Each `[mcp_servers.<name>]` table is one stdio server Codex launches on demand;
+add more tables for more servers. These are Codex's tools, independent of what
+Claude Code has registered.
+
 ## 1. Principle: receipt over self-report
 
 A consulted model's prose may misstate its own identity ("GPT-5" when it is
