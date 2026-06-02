@@ -13,9 +13,11 @@ project actually needs:
 
 - a **model-explicit `Generated-by`** (not the bare `Generated-by: Claude AI`)
   **immediately followed by `Signed-off-by`**;
-- the generic `Co-Authored-By: Claude` and the robot-emoji auto-footer
-  (`🤖 Generated with [Claude Code]`) are rejected — a model-explicit
-  `Co-Authored-By: Claude Opus 4.8 (1M context) <…>` is allowed;
+- AI attribution lives in `Generated-by` alone; the generic
+  `Co-Authored-By: Claude` and the robot-emoji auto-footer
+  (`🤖 Generated with [Claude Code]`) are rejected, and a `Co-Authored-By`
+  that names an AI model is **warned** as redundant (reserve `Co-Authored-By`
+  for a human co-author);
 - the subject line is capped at 70 characters (body lines over 70 are warnings,
   so URLs, tables, and code are not blocked);
 - when an `MCP-*` block is present (a second model was consulted in-band, see

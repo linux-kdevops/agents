@@ -37,6 +37,14 @@ Signed-off-by: Human Name <email@example.com>
 
 **Enforcement**: The commit-msg hook validates all 9 required fields.
 
+**AI attribution = `Generated-by`, once.** Record the AI that generated the
+change in `Generated-by` (name the model explicitly, e.g. `Claude Opus 4.8
+(1M context)`, not the bare `Claude AI`). Do **not** also add a
+`Co-Authored-By` that names the same AI model — it is redundant with
+`Generated-by` and semantically wrong (the AI generated the change; it is not
+a human co-author). Reserve `Co-Authored-By` for an additional *human*
+co-author. The `🤖 Generated with [Claude Code]` auto-footer is never used.
+
 ## Protocol Extensions
 
 When the primary assistant consults a second model in-band (e.g. Claude Code
