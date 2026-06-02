@@ -37,6 +37,19 @@ Signed-off-by: Human Name <email@example.com>
 
 **Enforcement**: The commit-msg hook validates all 9 required fields.
 
+## Protocol Extensions
+
+When the primary assistant consults a second model in-band (e.g. Claude Code
+calling Codex over an MCP server), record the consultation — including its real
+token cost, read from the model's usage receipt rather than its self-report —
+with `MCP-*` and `Collab-*` trailers above the `Generated-by`/`Signed-off-by`
+pair. This MCP-agent extension (dual-plan generate→grade→merge loop, fixed
+grading rubric, git-derived ledger) is documented in
+[`docs/mcp-agent-extension.md`](docs/mcp-agent-extension.md). The base
+commit-msg hook is unchanged; the extension's trailers are produced
+mechanically and validated by the usage script (fail-closed, NO-STUBS), not by
+the hook.
+
 ## File Structure
 
 ```
@@ -195,6 +208,6 @@ documentation is mysterious. You need both.
 
 ---
 
-**Protocol Version**: 1.0
-**Last Updated**: 2025-10-28
+**Protocol Version**: 1.1
+**Last Updated**: 2026-06-02
 **Maintainer**: Multi-AI collaboration (practice what we preach)

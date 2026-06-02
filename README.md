@@ -205,6 +205,15 @@ Signed-off-by: <Human Name> <email>
 
 **The hook will FAIL the commit if any required field is missing.**
 
+### Extension: in-band MCP-agent consultation (v1.1)
+
+When the primary assistant consults a second model in-band (e.g. Claude Code
+calling Codex over an MCP server), record it with `MCP-*` and `Collab-*`
+trailers — with the model and token cost read from the model's usage receipt,
+not its self-report. The full scheme (dual-plan generate→grade→merge loop,
+fixed rubric, git-derived ledger, fail-closed token capture) is in
+[`docs/mcp-agent-extension.md`](docs/mcp-agent-extension.md).
+
 ## Thought Trace Format
 
 For complex decisions, create `.ai-traces/<session-id>.md`:
