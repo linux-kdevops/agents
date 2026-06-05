@@ -1,0 +1,44 @@
+#!/bin/bash
+# MACP prompt-ledger trailer validator (commit-msg hook extension).
+#
+# Wire this AFTER the base MACP commit-msg hook. It is additive: it only acts
+# when a commit declares prompt-ledger trailers. When Prompt-Entry is present
+# it requires a well-formed Prompt-SHA256 (64 hex), a Prompt-Parent-SHA256
+# (64 hex or 'none'), and a Prompt-Ledger trailer.
+COMMIT_MSG_FILE="$1"
+MSG="$(cat "$COMMIT_MSG_FILE")"
+
+# Nothing to do unless this commit touches the prompt ledger.
+if ! echo "$MSG" | grep -q "^Prompt-Entry:"; then
+	exit 0
+fi
+
+errors=0
+need() {
+	if ! echo "$MSG" | grep -qE "^$1:"; then
+		echo "❌ prompt-ledger: missing $1 trailer"
+		errors=$((errors + 1))
+	fi
+}
+need "Prompt-Ledger"
+need "Prompt-SHA256"
+need "Prompt-Parent-SHA256"
+
+sha="$(echo "$MSG" | grep "^Prompt-SHA256:" | head -1 | cut -d: -f2- | tr -d ' ')"
+if [ -n "$sha" ] && ! echo "$sha" | grep -qE '^[0-9a-f]{64}$'; then
+	echo "❌ prompt-ledger: Prompt-SHA256 must be 64 hex chars"
+	errors=$((errors + 1))
+fi
+
+parent="$(echo "$MSG" | grep "^Prompt-Parent-SHA256:" | head -1 | cut -d: -f2- | tr -d ' ')"
+if [ -n "$parent" ] && ! echo "$parent" | grep -qE '^([0-9a-f]{64}|none)$'; then
+	echo "❌ prompt-ledger: Prompt-Parent-SHA256 must be 64 hex chars or 'none'"
+	errors=$((errors + 1))
+fi
+
+if [ "$errors" -ne 0 ]; then
+	echo "prompt-ledger trailer validation FAILED"
+	exit 1
+fi
+echo "✓ prompt-ledger trailers valid"
+exit 0
