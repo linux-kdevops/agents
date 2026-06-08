@@ -58,6 +58,13 @@ commit-msg hook is unchanged; the extension's trailers are produced
 mechanically and validated by the usage script (fail-closed, NO-STUBS), not by
 the hook.
 
+When work is coordinated through Linear or another tracker, record the external
+work item with optional `Work-*` trailers above the
+`Generated-by`/`Signed-off-by` pair. Git remains the source of truth; the tracker
+is a queue and private coordination layer. The work-tracker extension, including
+Linear labels, workflow states, and issue templates, is documented in
+[`docs/macp-work-tracker-extension.md`](docs/macp-work-tracker-extension.md).
+
 ## File Structure
 
 ```

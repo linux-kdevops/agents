@@ -26,7 +26,9 @@ to collaborate on an open source project.
 3. **Thought Traces**: Structured decision documentation
 4. **Token Accounting**: Track costs per AI, per task
 5. **Handoff System**: Explicit AI-to-AI task delegation
-6. **Visualization**: See the AI collaboration graph
+6. **External Work Tracking**: Optional Linear/GitHub/Jira links for
+   private queues and maintainer coordination
+7. **Visualization**: See the AI collaboration graph
 
 ## Quick Start
 
@@ -220,6 +222,26 @@ resume your session and check `/mcp`. Full walkthrough — including how to pick
 up the new server mid-session and how to give Codex its own MCP servers via
 `~/.codex/config.toml` — is in
 [§0 of the extension doc](docs/mcp-agent-extension.md#0-setup-wire-claude-code-to-the-codex-mcp-server).
+
+### Extension: external work tracking (v1.2)
+
+Projects that use Linear or another issue tracker as an agent-maintainer queue
+can link commits to work items with optional `Work-*` trailers. The tracker is
+coordination state; git remains the durable audit trail.
+
+```text
+Work-Tracker: linear
+Work-Item: RUSH-123
+Work-Role: source
+Work-Visibility: private-context
+Work-Resolution: fixed
+```
+
+The base and MACP-lite hooks validate these fields only when they are present.
+Use this for private backlogs, agent handoffs, security or release follow-ups,
+and work that is useful to agents but not ready for public GitHub Issues. The
+full scheme, including Linear labels and issue templates, is documented in
+[`docs/macp-work-tracker-extension.md`](docs/macp-work-tracker-extension.md).
 
 ## Thought Trace Format
 

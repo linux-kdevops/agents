@@ -22,7 +22,11 @@ project actually needs:
   so URLs, tables, and code are not blocked);
 - when an `MCP-*` block is present (a second model was consulted in-band, see
   [`mcp-agent-extension.md`](mcp-agent-extension.md)), its core fields
-  (`MCP-Model`, `MCP-Usage-Receipt`, `MCP-Token-Usage`) are sanity-checked.
+  (`MCP-Model`, `MCP-Usage-Receipt`, `MCP-Token-Usage`) are sanity-checked;
+- when a `Work-*` block is present (the commit is linked to Linear or another
+  work tracker, see
+  [`macp-work-tracker-extension.md`](macp-work-tracker-extension.md)), its
+  tracker, item, role, visibility, and resolution values are sanity-checked.
 
 It does **not** require the `AI-*` fields. Merge / `WIP:` / `fixup!` / `squash!`
 commits skip validation, and `git commit --no-verify` bypasses it for a one-off.

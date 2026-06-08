@@ -37,6 +37,85 @@ check_field() {
     return 0
 }
 
+validate_work_tracker() {
+    if ! echo "$COMMIT_MSG" | grep -qE "^Work-(Tracker|Item|Role|Visibility|Resolution):"; then
+        return 0
+    fi
+
+    local tracker item role visibility resolution
+    tracker=$(echo "$COMMIT_MSG" | grep "^Work-Tracker:" | head -1 | cut -d: -f2- | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+    item=$(echo "$COMMIT_MSG" | grep "^Work-Item:" | head -1 | cut -d: -f2- | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+    role=$(echo "$COMMIT_MSG" | grep "^Work-Role:" | head -1 | cut -d: -f2- | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+    visibility=$(echo "$COMMIT_MSG" | grep "^Work-Visibility:" | head -1 | cut -d: -f2- | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+    resolution=$(echo "$COMMIT_MSG" | grep "^Work-Resolution:" | head -1 | cut -d: -f2- | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+
+    if [ -z "$tracker" ] || [ "$tracker" = "TODO" ] || [ "$tracker" = "FIXME" ]; then
+        echo -e "${RED}❌ Work-* block present but Work-Tracker is missing${NC}"
+        ((ERRORS++))
+    else
+        case "$tracker" in
+            linear|github|gitlab|jira|other)
+                echo -e "${GREEN}✓ Work-Tracker: $tracker${NC}"
+                ;;
+            *)
+                echo -e "${RED}❌ Invalid Work-Tracker: $tracker${NC}"
+                echo -e "${YELLOW}   Must be: linear, github, gitlab, jira, or other${NC}"
+                ((ERRORS++))
+                ;;
+        esac
+    fi
+
+    if [ -z "$item" ] || [ "$item" = "TODO" ] || [ "$item" = "FIXME" ]; then
+        echo -e "${RED}❌ Work-* block present but Work-Item is missing${NC}"
+        ((ERRORS++))
+    fi
+
+    if [ -z "$role" ]; then
+        echo -e "${RED}❌ Work-* block present but Work-Role is missing${NC}"
+        ((ERRORS++))
+    else
+        case "$role" in
+            source|handoff|followup|blocked-by|security|release|review|triage)
+                echo -e "${GREEN}✓ Work-Role: $role${NC}"
+                ;;
+            *)
+                echo -e "${RED}❌ Invalid Work-Role: $role${NC}"
+                echo -e "${YELLOW}   Must be: source, handoff, followup, blocked-by, security, release, review, or triage${NC}"
+                ((ERRORS++))
+                ;;
+        esac
+    fi
+
+    if [ -z "$visibility" ]; then
+        echo -e "${RED}❌ Work-* block present but Work-Visibility is missing${NC}"
+        ((ERRORS++))
+    else
+        case "$visibility" in
+            public|private|private-context|redacted)
+                echo -e "${GREEN}✓ Work-Visibility: $visibility${NC}"
+                ;;
+            *)
+                echo -e "${RED}❌ Invalid Work-Visibility: $visibility${NC}"
+                echo -e "${YELLOW}   Must be: public, private, private-context, or redacted${NC}"
+                ((ERRORS++))
+                ;;
+        esac
+    fi
+
+    if [ -n "$resolution" ]; then
+        case "$resolution" in
+            fixed|partial|deferred|wontfix|research|none)
+                echo -e "${GREEN}✓ Work-Resolution: $resolution${NC}"
+                ;;
+            *)
+                echo -e "${RED}❌ Invalid Work-Resolution: $resolution${NC}"
+                echo -e "${YELLOW}   Must be: fixed, partial, deferred, wontfix, research, or none${NC}"
+                ((ERRORS++))
+                ;;
+        esac
+    fi
+}
+
 # Skip check for merge commits
 if echo "$COMMIT_MSG" | grep -q "^Merge"; then
     echo -e "${GREEN}✓ Merge commit - skipping MACP validation${NC}"
@@ -102,6 +181,8 @@ if echo "$COMMIT_MSG" | grep -qE "^[-*] "; then
     echo -e "${YELLOW}   MACP prefers plain English explanations over shopping lists${NC}"
     echo -e "${YELLOW}   This is a warning, not an error (commit will proceed)${NC}"
 fi
+
+validate_work_tracker
 
 # Check for "Generated-by" and "Signed-off-by" order
 GENBY_LINE=$(echo "$COMMIT_MSG" | grep -n "^Generated-by:" | cut -d: -f1)

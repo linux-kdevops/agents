@@ -192,6 +192,23 @@ EOF
 )"
 ```
 
+### Workflow 4: Link a Linear Work Item
+
+If the task came from Linear or another private work queue, add optional
+`Work-*` trailers above `Generated-by` / `Signed-off-by`. Git remains the audit
+trail; Linear is only coordination state.
+
+```text
+Work-Tracker: linear
+Work-Item: RUSH-123
+Work-Role: source
+Work-Visibility: private-context
+Work-Resolution: fixed
+```
+
+See `docs/macp-work-tracker-extension.md` for the Linear labels, workflow
+states, and issue template.
+
 ## Visualization
 
 After a few commits with MACP, visualize the collaboration:

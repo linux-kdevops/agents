@@ -11,6 +11,7 @@
 #     / robot-emoji lines are rejected (a model-explicit Co-Authored-By is fine)
 #   - subject line <= 70 chars (hard); body lines > 70 are warnings
 #   - when an `MCP-*` block is present, its core fields are sanity-checked (warn)
+#   - when a `Work-*` block is present, its tracker fields are checked
 #
 # Merge / WIP / fixup! / squash! commits skip validation.
 set -u
@@ -27,6 +28,63 @@ esac
 errors=0; warns=0
 err()  { echo "❌ $*"; errors=$((errors+1)); }
 warn() { echo "⚠  $*"; warns=$((warns+1)); }
+
+field_value() {
+  printf '%s\n' "$CONTENT" \
+    | grep -m1 "^$1:" \
+    | cut -d: -f2- \
+    | sed 's/^[[:space:]]*//;s/[[:space:]]*$//'
+}
+
+validate_work_tracker() {
+  if ! printf '%s\n' "$CONTENT" | grep -qE '^Work-(Tracker|Item|Role|Visibility|Resolution):'; then
+    return
+  fi
+
+  local tracker item role visibility resolution
+  tracker="$(field_value Work-Tracker)"
+  item="$(field_value Work-Item)"
+  role="$(field_value Work-Role)"
+  visibility="$(field_value Work-Visibility)"
+  resolution="$(field_value Work-Resolution)"
+
+  case "$tracker" in
+    linear|github|gitlab|jira|other) ;;
+    ""|TODO|FIXME)
+      err "Work-* block present but Work-Tracker is missing" ;;
+    *)
+      err "invalid Work-Tracker '$tracker' (use linear, github, gitlab, jira, or other)" ;;
+  esac
+
+  case "$item" in
+    ""|TODO|FIXME)
+      err "Work-* block present but Work-Item is missing" ;;
+  esac
+
+  case "$role" in
+    source|handoff|followup|blocked-by|security|release|review|triage) ;;
+    "")
+      err "Work-* block present but Work-Role is missing" ;;
+    *)
+      err "invalid Work-Role '$role'" ;;
+  esac
+
+  case "$visibility" in
+    public|private|private-context|redacted) ;;
+    "")
+      err "Work-* block present but Work-Visibility is missing" ;;
+    *)
+      err "invalid Work-Visibility '$visibility'" ;;
+  esac
+
+  if [ -n "$resolution" ]; then
+    case "$resolution" in
+      fixed|partial|deferred|wontfix|research|none) ;;
+      *)
+        err "invalid Work-Resolution '$resolution'" ;;
+    esac
+  fi
+}
 
 # --- subject length ---
 if [ "${#FIRST}" -gt 70 ]; then
@@ -72,6 +130,8 @@ if printf '%s\n' "$CONTENT" | grep -q '^MCP-Server:'; then
     printf '%s\n' "$CONTENT" | grep -q "^$f:" || warn "MCP block present but missing $f"
   done
 fi
+
+validate_work_tracker
 
 if [ "$errors" -gt 0 ]; then
   echo "macp-lite: FAILED with $errors error(s)"
