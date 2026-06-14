@@ -70,6 +70,16 @@ mapping, the declassification workflow, labels, states, and issue templates, is
 documented in
 [`docs/macp-work-tracker-extension.md`](docs/macp-work-tracker-extension.md).
 
+When a commit was guided by a retrieved cognitive memory (e.g. a cmm
+profile served over MCP), record it with an optional `Memory-Source:`
+trailer above the `Generated-by`/`Signed-off-by` pair. The
+cognitive-memory extension aligns the thought-trace vocabulary with cmm's
+reasoning-DAG node types, defines the `Memory-Source` trailer, and maps
+cmm's team/project memory classes onto the work-tracker visibility
+boundary so private reasoning is not shared until declassified. It is
+preparatory (the integration is not yet wired) and is documented in
+[`docs/macp-cmm-memory-extension.md`](docs/macp-cmm-memory-extension.md).
+
 ## File Structure
 
 ```
