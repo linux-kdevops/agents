@@ -61,8 +61,13 @@ the hook.
 When work is coordinated through Linear or another tracker, record the external
 work item with optional `Work-*` trailers above the
 `Generated-by`/`Signed-off-by` pair. Git remains the source of truth; the tracker
-is a queue and private coordination layer. The work-tracker extension, including
-Linear labels, workflow states, and issue templates, is documented in
+is a queue, a private coordination layer, and — with the `public-collab`
+visibility — a public-interfacing notebook for collaborating with outside
+maintainers, distinct from the private lab notebook that holds the full
+reasoning. The work-tracker extension (v1.3), including the `public-collab`
+visibility, the `Work-Project`/`Work-Milestone` trailers, the program→Linear
+mapping, the declassification workflow, labels, states, and issue templates, is
+documented in
 [`docs/macp-work-tracker-extension.md`](docs/macp-work-tracker-extension.md).
 
 ## File Structure

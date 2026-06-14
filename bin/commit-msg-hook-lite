@@ -70,7 +70,7 @@ validate_work_tracker() {
   esac
 
   case "$visibility" in
-    public|private|private-context|redacted) ;;
+    public|public-collab|private|private-context|redacted) ;;
     "")
       err "Work-* block present but Work-Visibility is missing" ;;
     *)
@@ -84,6 +84,14 @@ validate_work_tracker() {
         err "invalid Work-Resolution '$resolution'" ;;
     esac
   fi
+
+  # Work-Project / Work-Milestone are optional free-form fields;
+  # only reject placeholder values.
+  local project milestone
+  project="$(field_value Work-Project)"
+  milestone="$(field_value Work-Milestone)"
+  case "$project" in TODO|FIXME) err "Work-Project has placeholder value '$project'" ;; esac
+  case "$milestone" in TODO|FIXME) err "Work-Milestone has placeholder value '$milestone'" ;; esac
 }
 
 # --- subject length ---

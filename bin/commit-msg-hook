@@ -91,12 +91,12 @@ validate_work_tracker() {
         ((ERRORS++))
     else
         case "$visibility" in
-            public|private|private-context|redacted)
+            public|public-collab|private|private-context|redacted)
                 echo -e "${GREEN}✓ Work-Visibility: $visibility${NC}"
                 ;;
             *)
                 echo -e "${RED}❌ Invalid Work-Visibility: $visibility${NC}"
-                echo -e "${YELLOW}   Must be: public, private, private-context, or redacted${NC}"
+                echo -e "${YELLOW}   Must be: public, public-collab, private, private-context, or redacted${NC}"
                 ((ERRORS++))
                 ;;
         esac
@@ -114,6 +114,24 @@ validate_work_tracker() {
                 ;;
         esac
     fi
+
+    # Work-Project and Work-Milestone are optional free-form fields
+    # (tracker project / phase). Only reject placeholder values.
+    local project milestone
+    project=$(echo "$COMMIT_MSG" | grep "^Work-Project:" | head -1 | cut -d: -f2- | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+    milestone=$(echo "$COMMIT_MSG" | grep "^Work-Milestone:" | head -1 | cut -d: -f2- | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+    for pair in "Work-Project=$project" "Work-Milestone=$milestone"; do
+        name=${pair%%=*}
+        val=${pair#*=}
+        if [ -n "$val" ]; then
+            if [ "$val" = "TODO" ] || [ "$val" = "FIXME" ]; then
+                echo -e "${RED}❌ $name has placeholder value: $val${NC}"
+                ((ERRORS++))
+            else
+                echo -e "${GREEN}✓ $name: $val${NC}"
+            fi
+        fi
+    done
 }
 
 # Skip check for merge commits
