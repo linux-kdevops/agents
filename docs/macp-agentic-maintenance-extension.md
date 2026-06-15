@@ -261,3 +261,110 @@ Verify-Mutation: required
 Spec-Change: impl-only
 Spec-Review: not-required
 ```
+
+## The Dafny addendum layer (`model:`)
+
+Creusot verifies the Rust. **Dafny is the spec laboratory and golden model**,
+not a Creusot replacement. It earns its keep on a project bound for
+*entirely* generative-AI maintenance for two reasons a human team needs less:
+the verified/not-verified signal is crisp for an agent loop, and a second
+verifier stack (Dafny's Boogie/Z3 vs Creusot's Why3/SMT) gives **verifier
+diversity** — if both an abstract Dafny model and the Creusot Rust impl agree
+on the core property, that is far stronger than betting one stack was sober.
+
+**Decision rule.** Creusot-alone to verify real Rust; Dafny-FIRST when still
+discovering the algorithm/invariant; **Dafny + Creusot only for components
+critical enough to want both an abstract verified model and a verified Rust
+impl.** Do not Dafny-model everything — a model that does not constrain the
+Rust is just a second spec pile to rot.
+
+**The hard rule (the whole game).** A Dafny model may NOT merge unless it is
+bound to the Rust by an *executable differential gate*. The model is compiled
+to a runnable golden oracle (`dafny build -t:py`, since the Rust backend is
+still partial) and the Rust output is diffed against it over bounded
+generated cases. Without that gate the Dafny proof is decorative — "write
+Rust, write unrelated Dafny, both pass something, ship bug, blame math."
+
+**Refinement architecture:**
+
+```text
+Dafny model/spec  (verified abstract properties)
+      ↓ dafny verify
+LLM proposes / maintains Rust impl
+      ↓ Creusot contracts MIRROR the model's properties
+cargo creusot verifies the Rust-level obligations
+      ↓ dafny build -t:py  →  executable golden oracle
+property/differential test diffs Rust behaviour vs the golden oracle
+      ↓
+CI rejects patches that break the proof OR model↔Rust agreement
+```
+
+**New trailers** (present only on a Dafny-addendum scope):
+
+```text
+Verify-Model:  n/a | dafny:<scope>
+Model-Refines: n/a | creusot:<scope>
+Model-Oracle:  n/a | executable:python:<scope>
+```
+
+and `Spec-Change` gains a `model` value:
+
+```text
+Spec-Change: none | impl-only | contract | oracle | model | trusted | toolchain | cfg
+```
+
+**The loop gains a `ModelGate`** — it becomes 8-state, but only when
+`Verify-Model` is present:
+
+```text
+Plan → ModelGate → Implement → OracleGate → ProofGate → MutationGate → SpecReview → Finalize
+```
+
+`ModelGate` rules (the Dafny model is spec-sensitive, like a public contract):
+
+- The agent MAY edit the `.dfy` model/proof while CREATING or STRENGTHENING it
+  (add predicates, lemmas, tighten postconditions).
+- The agent MAY NOT weaken a model predicate/postcondition, add `assume`,
+  `{:axiom}`, `{:verify false}`, `{:extern}`/`{:compile false}` trusted specs,
+  or change the model↔contract binding without `Spec-Review`.
+- ANY change to an existing model file is `Spec-Change: model`.
+
+**Manifest + hook.** The `spec-owned.tsv` `model` kind binds the `.dfy` to its
+contract + oracle + the `ci/dafny-toolchain.lock` TCB. The gate flags ANY
+`.dfy` change as spec-sensitive and records the model regex hit as evidence:
+
+```bash
+model_re='^[+-].*((requires|ensures|invariant|decreases|predicate|function|lemma|method|datatype|ghost|forall|exists|assume)|\{:(axiom|verify false|extern|compile false)\})'
+```
+
+**TCB.** Dafny adds a second locked toolchain (`ci/dafny-toolchain.lock`:
+dafny CLI + bundled Boogie/Z3 + the Python oracle backend). The diversity is
+the point — but it is a second trusted base, so it is pinned and any change
+routes through `Spec-Review` the same as the Creusot lock.
+
+### Example: Rush `topo-roots-v1` (first Dafny addendum)
+
+`topological_sort_from_roots` is the build-order core (a real serial-build
+bug lived there) and an abstract seq/set model is exactly Dafny's sweet spot,
+so it is the first scope to carry a Dafny addendum. The model
+(`verification/dafny/topo_roots/TopSort.dfy`) defines `ValidTopo`: the order
+has no duplicates, its node set is EXACTLY the reachable set (rejecting the
+"drops a reachable node / returns empty" bug class), and every dependency
+precedes the node needing it. A model-strengthening commit:
+
+```text
+verified-core: topo-roots Dafny model + Creusot contract + differential gate
+
+Verify-Scope: topo-roots-v1
+Verify-Model: dafny:topo-roots-v1
+Model-Refines: creusot:topo-roots-v1
+Model-Oracle: executable:python:topo-roots-v1
+Verify-Proof: required
+Verify-Oracle: required
+Verify-Mutation: required
+Spec-Change: model
+Spec-Review: human:mcgrof:2026-06-15:RUSH-PR-2
+
+Generated-by: Claude Opus 4.8
+Signed-off-by: Luis Chamberlain <mcgrof@gmail.com>
+```
