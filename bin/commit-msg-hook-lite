@@ -94,6 +94,30 @@ validate_work_tracker() {
   case "$milestone" in TODO|FIXME) err "Work-Milestone has placeholder value '$milestone'" ;; esac
 }
 
+# CMM cognitive-memory extension (macp-cmm-memory-extension.md): the optional
+# Memory-Source trailer (<provider>:<id>, cmm: recommended) records which
+# retrieved cognitive memory guided the change. Checked only when present,
+# like the Work-*/MCP-* blocks.
+validate_memory_source() {
+  printf '%s\n' "$CONTENT" | grep -qE '^Memory-Source:' || return 0
+  local genby
+  genby="$(printf '%s\n' "$CONTENT" | grep -n '^Generated-by:' | head -1 | cut -d: -f1)"
+  while IFS= read -r entry; do
+    local ln val
+    ln=${entry%%:*}
+    val=$(printf '%s\n' "$entry" | cut -d: -f3- | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+    case "$val" in
+      ""|TODO|FIXME) err "Memory-Source present but empty/placeholder" ;;
+      cmm:?*) ;;
+      [A-Za-z0-9_.-]*:?*) warn "Memory-Source provider is not 'cmm' (cmm: prefix recommended): $val" ;;
+      *) err "Memory-Source malformed '$val' (want <provider>:<id>, e.g. cmm:profile-abc123)" ;;
+    esac
+    if [ -n "$genby" ] && [ "$ln" -gt "$genby" ] 2>/dev/null; then
+      err "Memory-Source must appear above the Generated-by/Signed-off-by pair"
+    fi
+  done < <(printf '%s\n' "$CONTENT" | grep -n '^Memory-Source:')
+}
+
 # --- subject length ---
 if [ "${#FIRST}" -gt 70 ]; then
   err "subject is ${#FIRST} chars (>70): $FIRST"
@@ -140,6 +164,7 @@ if printf '%s\n' "$CONTENT" | grep -q '^MCP-Server:'; then
 fi
 
 validate_work_tracker
+validate_memory_source
 
 if [ "$errors" -gt 0 ]; then
   echo "macp-lite: FAILED with $errors error(s)"

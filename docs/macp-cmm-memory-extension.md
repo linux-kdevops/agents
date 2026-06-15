@@ -1,7 +1,10 @@
 # MACP cognitive-memory (cmm) extension
 
 **Protocol version**: 1.3
-**Status**: draft (prep — integration not yet wired)
+**Status**: draft — `Memory-Source` trailer validation WIRED in
+`bin/commit-msg-hook` and `bin/commit-msg-hook-lite` (validated only when
+present, like the Work-*/MCP-* blocks); cmm-provider ingest/MCP wiring is the
+downstream adoption step.
 **Extends**: the base MACP commit format and the work-tracker
 extension; does not replace any required field.
 
@@ -63,8 +66,12 @@ Memory-Source: cmm:<profile-or-memory-id>
 `Memory-Source` names the cognitive-memory provider and the specific
 profile or memory id that informed the change, so a future maintainer
 can audit *why* the agent took an approach. Multiple lines are allowed.
-The value is free-form (`cmm:` prefix recommended). Hooks validate it
-only when present, the same way `Work-*` and `MCP-*` blocks are.
+The value is free-form (`<provider>:<id>`, `cmm:` prefix recommended).
+`bin/commit-msg-hook` and `bin/commit-msg-hook-lite` validate it **only when
+present** — same posture as the `Work-*` and `MCP-*` blocks: a present
+`Memory-Source` must be non-placeholder, shaped `<provider>:<id>`, and sit
+ABOVE the `Generated-by`/`Signed-off-by` pair; a non-`cmm:` provider is a
+warning. Absent, it is ignored.
 
 ## Bridge 3: visibility maps to the two-notebook boundary
 

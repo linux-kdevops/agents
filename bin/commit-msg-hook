@@ -134,6 +134,41 @@ validate_work_tracker() {
     done
 }
 
+# CMM cognitive-memory extension (docs/macp-cmm-memory-extension.md):
+# the optional `Memory-Source:` trailer records which retrieved cognitive
+# memory (e.g. a cmm profile served over MCP) guided the change. Validated
+# ONLY when present, the same way the Work-* and MCP-* blocks are. Format is
+# `<provider>:<id>` (cmm: prefix recommended); it belongs in the trailer
+# block ABOVE the Generated-by / Signed-off-by pair. Multiple lines allowed.
+validate_memory_source() {
+    if ! echo "$COMMIT_MSG" | grep -qE "^Memory-Source:"; then
+        return 0
+    fi
+    local genby_line ln val
+    genby_line=$(echo "$COMMIT_MSG" | grep -n "^Generated-by:" | head -1 | cut -d: -f1)
+    while IFS= read -r entry; do
+        ln=${entry%%:*}
+        val=$(printf '%s\n' "$entry" | cut -d: -f3- | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+        if [ -z "$val" ] || [ "$val" = "TODO" ] || [ "$val" = "FIXME" ]; then
+            echo -e "${RED}❌ Memory-Source present but empty/placeholder${NC}"
+            ((ERRORS++))
+        elif ! printf '%s\n' "$val" | grep -qE "^[A-Za-z0-9_.-]+:.+"; then
+            echo -e "${RED}❌ Memory-Source malformed: '$val'${NC}"
+            echo -e "${YELLOW}   Want <provider>:<id>, e.g. cmm:profile-abc123${NC}"
+            ((ERRORS++))
+        else
+            case "$val" in
+                cmm:*) echo -e "${GREEN}✓ Memory-Source: $val${NC}" ;;
+                *) echo -e "${YELLOW}⚠ Memory-Source provider is not 'cmm' (cmm: prefix recommended): $val${NC}" ;;
+            esac
+        fi
+        if [ -n "$genby_line" ] && [ -n "$ln" ] && [ "$ln" -gt "$genby_line" ]; then
+            echo -e "${RED}❌ Memory-Source must appear ABOVE the Generated-by/Signed-off-by pair${NC}"
+            ((ERRORS++))
+        fi
+    done < <(echo "$COMMIT_MSG" | grep -n "^Memory-Source:")
+}
+
 # Skip check for merge commits
 if echo "$COMMIT_MSG" | grep -q "^Merge"; then
     echo -e "${GREEN}✓ Merge commit - skipping MACP validation${NC}"
@@ -201,6 +236,7 @@ if echo "$COMMIT_MSG" | grep -qE "^[-*] "; then
 fi
 
 validate_work_tracker
+validate_memory_source
 
 # Check for "Generated-by" and "Signed-off-by" order
 GENBY_LINE=$(echo "$COMMIT_MSG" | grep -n "^Generated-by:" | cut -d: -f1)
