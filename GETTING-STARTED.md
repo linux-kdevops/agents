@@ -209,6 +209,30 @@ Work-Resolution: fixed
 See `docs/macp-work-tracker-extension.md` for the Linear labels, workflow
 states, and issue template.
 
+### Workflow 5: Track Task Skills
+
+Copy the skill ledger once, then append a row whenever a task creates,
+reuses, evolves, evaluates, or exposes a missing skill.
+
+```bash
+cp ~/devel/agents/templates/SKILLS.md .
+~/devel/agents/bin/skill-ledger-metrics.py SKILLS.md
+```
+
+Skill-relevant commits can add optional `Skill-*` trailers above
+`Generated-by` / `Signed-off-by`.
+
+```text
+Skill-Ledger: SKILLS.md
+Skill-Task: RUSH-123
+Skill-ID: rust-async-backpressure
+Skill-Event: evolved
+Skill-Eval: virtual-pass
+```
+
+See `docs/macp-skill-evolution-extension.md` for the eval levels, leakage
+barrier, and metrics.
+
 ## Visualization
 
 After a few commits with MACP, visualize the collaboration:

@@ -118,6 +118,58 @@ validate_memory_source() {
   done < <(printf '%s\n' "$CONTENT" | grep -n '^Memory-Source:')
 }
 
+validate_skill_evolution() {
+  if ! printf '%s\n' "$CONTENT" | grep -qE '^Skill-(Ledger|Task|ID|Event|Eval|Trace):'; then
+    return
+  fi
+
+  local ledger task skill_id event eval trace genby
+  ledger="$(field_value Skill-Ledger)"
+  task="$(field_value Skill-Task)"
+  skill_id="$(field_value Skill-ID)"
+  event="$(field_value Skill-Event)"
+  eval="$(field_value Skill-Eval)"
+  trace="$(field_value Skill-Trace)"
+
+  case "$ledger" in ""|TODO|FIXME) err "Skill-* block present but Skill-Ledger is missing/placeholder" ;; esac
+  case "$task" in ""|TODO|FIXME) err "Skill-* block present but Skill-Task is missing/placeholder" ;; esac
+  case "$skill_id" in ""|TODO|FIXME) err "Skill-* block present but Skill-ID is missing/placeholder" ;; esac
+
+  case "$event" in
+    needed|missing|created|reused|evolved|evaluated|retired|none) ;;
+    ""|TODO|FIXME)
+      err "Skill-* block present but Skill-Event is missing/placeholder" ;;
+    *)
+      err "invalid Skill-Event '$event'" ;;
+  esac
+
+  case "$event:$skill_id" in
+    created:none|created:-|reused:none|reused:-|evolved:none|evolved:-|evaluated:none|evaluated:-)
+      err "Skill-Event '$event' requires a real Skill-ID" ;;
+  esac
+
+  if [ -n "$eval" ]; then
+    case "$eval" in
+      virtual-pass|virtual-fail|final-pass|final-fail|partial|not-run|n/a) ;;
+      TODO|FIXME)
+        err "Skill-Eval has placeholder value '$eval'" ;;
+      *)
+        err "invalid Skill-Eval '$eval'" ;;
+    esac
+  fi
+
+  case "$trace" in TODO|FIXME) err "Skill-Trace has placeholder value '$trace'" ;; esac
+
+  genby="$(printf '%s\n' "$CONTENT" | grep -n '^Generated-by:' | head -1 | cut -d: -f1)"
+  while IFS= read -r entry; do
+    local ln
+    ln=${entry%%:*}
+    if [ -n "$genby" ] && [ "$ln" -gt "$genby" ] 2>/dev/null; then
+      err "Skill-* trailers must appear above the Generated-by/Signed-off-by pair"
+    fi
+  done < <(printf '%s\n' "$CONTENT" | grep -n '^Skill-')
+}
+
 # --- subject length ---
 if [ "${#FIRST}" -gt 70 ]; then
   err "subject is ${#FIRST} chars (>70): $FIRST"
@@ -165,6 +217,7 @@ fi
 
 validate_work_tracker
 validate_memory_source
+validate_skill_evolution
 
 if [ "$errors" -gt 0 ]; then
   echo "macp-lite: FAILED with $errors error(s)"

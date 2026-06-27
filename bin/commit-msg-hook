@@ -169,6 +169,85 @@ validate_memory_source() {
     done < <(echo "$COMMIT_MSG" | grep -n "^Memory-Source:")
 }
 
+validate_skill_evolution() {
+    if ! echo "$COMMIT_MSG" | grep -qE "^Skill-(Ledger|Task|ID|Event|Eval|Trace):"; then
+        return 0
+    fi
+
+    local ledger task skill_id event eval genby_line
+    ledger=$(echo "$COMMIT_MSG" | grep "^Skill-Ledger:" | head -1 | cut -d: -f2- | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+    task=$(echo "$COMMIT_MSG" | grep "^Skill-Task:" | head -1 | cut -d: -f2- | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+    skill_id=$(echo "$COMMIT_MSG" | grep "^Skill-ID:" | head -1 | cut -d: -f2- | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+    event=$(echo "$COMMIT_MSG" | grep "^Skill-Event:" | head -1 | cut -d: -f2- | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+    eval=$(echo "$COMMIT_MSG" | grep "^Skill-Eval:" | head -1 | cut -d: -f2- | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+
+    for pair in "Skill-Ledger=$ledger" "Skill-Task=$task" "Skill-ID=$skill_id" "Skill-Event=$event"; do
+        local name val
+        name=${pair%%=*}
+        val=${pair#*=}
+        if [ -z "$val" ] || [ "$val" = "TODO" ] || [ "$val" = "FIXME" ]; then
+            echo -e "${RED}❌ Skill-* block present but $name is missing/placeholder${NC}"
+            ((ERRORS++))
+        fi
+    done
+
+    case "$event" in
+        needed|missing|created|reused|evolved|evaluated|retired|none)
+            echo -e "${GREEN}✓ Skill-Event: $event${NC}"
+            ;;
+        "")
+            ;;
+        *)
+            echo -e "${RED}❌ Invalid Skill-Event: $event${NC}"
+            echo -e "${YELLOW}   Must be: needed, missing, created, reused, evolved, evaluated, retired, or none${NC}"
+            ((ERRORS++))
+            ;;
+    esac
+
+    case "$event" in
+        created|reused|evolved|evaluated)
+            if [ "$skill_id" = "none" ] || [ "$skill_id" = "-" ]; then
+                echo -e "${RED}❌ Skill-Event '$event' requires a real Skill-ID${NC}"
+                ((ERRORS++))
+            fi
+            ;;
+    esac
+
+    if [ -n "$eval" ]; then
+        case "$eval" in
+            virtual-pass|virtual-fail|final-pass|final-fail|partial|not-run|n/a)
+                echo -e "${GREEN}✓ Skill-Eval: $eval${NC}"
+                ;;
+            TODO|FIXME)
+                echo -e "${RED}❌ Skill-Eval has placeholder value: $eval${NC}"
+                ((ERRORS++))
+                ;;
+            *)
+                echo -e "${RED}❌ Invalid Skill-Eval: $eval${NC}"
+                echo -e "${YELLOW}   Must be: virtual-pass, virtual-fail, final-pass, final-fail, partial, not-run, or n/a${NC}"
+                ((ERRORS++))
+                ;;
+        esac
+    fi
+
+    local trace
+    trace=$(echo "$COMMIT_MSG" | grep "^Skill-Trace:" | head -1 | cut -d: -f2- | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+    if [ "$trace" = "TODO" ] || [ "$trace" = "FIXME" ]; then
+        echo -e "${RED}❌ Skill-Trace has placeholder value: $trace${NC}"
+        ((ERRORS++))
+    fi
+
+    genby_line=$(echo "$COMMIT_MSG" | grep -n "^Generated-by:" | head -1 | cut -d: -f1)
+    while IFS= read -r entry; do
+        local ln
+        ln=${entry%%:*}
+        if [ -n "$genby_line" ] && [ -n "$ln" ] && [ "$ln" -gt "$genby_line" ]; then
+            echo -e "${RED}❌ Skill-* trailers must appear ABOVE the Generated-by/Signed-off-by pair${NC}"
+            ((ERRORS++))
+        fi
+    done < <(echo "$COMMIT_MSG" | grep -n "^Skill-")
+}
+
 # Skip check for merge commits
 if echo "$COMMIT_MSG" | grep -q "^Merge"; then
     echo -e "${GREEN}✓ Merge commit - skipping MACP validation${NC}"
@@ -237,6 +316,7 @@ fi
 
 validate_work_tracker
 validate_memory_source
+validate_skill_evolution
 
 # Check for "Generated-by" and "Signed-off-by" order
 GENBY_LINE=$(echo "$COMMIT_MSG" | grep -n "^Generated-by:" | cut -d: -f1)

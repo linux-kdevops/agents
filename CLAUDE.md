@@ -80,6 +80,14 @@ boundary so private reasoning is not shared until declassified. It is
 preparatory (the integration is not yet wired) and is documented in
 [`docs/macp-cmm-memory-extension.md`](docs/macp-cmm-memory-extension.md).
 
+When a commit creates, reuses, evaluates, or evolves an AI skill, record
+it with optional `Skill-*` trailers above the `Generated-by` /
+`Signed-off-by` pair and append the task-to-skill event to `SKILLS.md`.
+The skill-evolution extension is inspired by OpenSkill's open-world
+skill loop: explicit skill artifacts, open-world evidence, virtual
+verification, and final evaluation kept behind a leakage barrier. It is
+documented in [`docs/macp-skill-evolution-extension.md`](docs/macp-skill-evolution-extension.md).
+
 ## File Structure
 
 ```
@@ -95,6 +103,7 @@ agents/
 │   └── ai-session               # Session management tool
 ├── templates/
 │   ├── project-template/        # Copy to new projects
+│   ├── SKILLS.md                # Skill-evolution ledger template
 │   │   └── .ai-traces/          # AI collaboration tracking
 │   └── thought-trace-template.md # Decision documentation format
 └── examples/
@@ -215,6 +224,18 @@ git commit --allow-empty -m "test: invalid commit without metadata"
 2. Test with both valid and invalid commits
 3. Update tests in this file's "Testing Changes" section
 4. Commit with AI-Task-Type: debug
+
+### Adding or Evolving a Skill
+
+1. Record the task in `SKILLS.md` as `missing`, `created`, `reused`, or
+   `evolved`
+2. Build at least smoke or virtual checks from public/project-owned
+   anchors before claiming quality improvement
+3. Keep final/holdout test details out of the skill construction loop
+4. Add `Skill-*` trailers to the commit when the code/docs change is
+   skill-relevant
+5. Run `bin/skill-ledger-metrics.py SKILLS.md` to update coverage and
+   eval metrics
 
 ## Questions to Ask When Making Changes
 

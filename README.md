@@ -28,7 +28,8 @@ to collaborate on an open source project.
 5. **Handoff System**: Explicit AI-to-AI task delegation
 6. **External Work Tracking**: Optional Linear/GitHub/Jira links for
    private queues and maintainer coordination
-7. **Visualization**: See the AI collaboration graph
+7. **Skill Evolution Tracking**: Optional task-to-skill ledger and metrics
+8. **Visualization**: See the AI collaboration graph
 
 ## Quick Start
 
@@ -243,6 +244,27 @@ and work that is useful to agents but not ready for public GitHub Issues. The
 full scheme, including Linear labels and issue templates, is documented in
 [`docs/macp-work-tracker-extension.md`](docs/macp-work-tracker-extension.md).
 
+### Extension: skill evolution tracking (v1.4)
+
+Projects can track whether each agent task had the skill it needed, reused an
+existing skill, created a new skill, or evolved a stale skill. Copy
+[`templates/SKILLS.md`](templates/SKILLS.md) into the project root and append
+task-to-skill rows as work lands.
+
+```text
+Skill-Ledger: SKILLS.md
+Skill-Task: RUSH-123
+Skill-ID: rust-async-backpressure
+Skill-Event: evolved
+Skill-Eval: virtual-pass
+```
+
+The base and MACP-lite hooks validate these fields only when present. Use
+`bin/skill-ledger-metrics.py SKILLS.md` to report skill coverage, open skill
+gaps, virtual/final pass rates, lift over baseline, verifier coverage, and
+cost. The design is documented in
+[`docs/macp-skill-evolution-extension.md`](docs/macp-skill-evolution-extension.md).
+
 ## Thought Trace Format
 
 For complex decisions, create `.ai-traces/<session-id>.md`:
@@ -372,6 +394,16 @@ ai-viz timeline
 
 # Update session map
 ai-viz update-session <session-id>
+```
+
+### `skill-ledger-metrics.py` - Skill Metrics
+
+```bash
+# Summarize task-skill coverage and eval progress
+bin/skill-ledger-metrics.py SKILLS.md
+
+# Emit machine-readable metrics for dashboards/CI
+bin/skill-ledger-metrics.py --json SKILLS.md
 ```
 
 ## Integration with Projects
