@@ -64,7 +64,8 @@ ln -s CLAUDE.md AGENTS.md
 # Start working session (generates session ID)
 export AI_SESSION=$(date +%Y-%m-%d-%H%M%S)-Claude-Code
 export AI_AGENT="Claude-Code"
-export AI_TASK_TYPE="implement"  # design|implement|debug|refactor|test|build|docs
+export AI_TASK_TYPE="implement"
+# Task types: design|implement|debug|refactor|test|build|docs|benchmark|perf
 
 # Log session start
 ~/devel/agents/bin/ai-session start
@@ -76,7 +77,7 @@ export AI_TASK_TYPE="implement"  # design|implement|debug|refactor|test|build|do
 
 ```bash
 git commit -m "$(cat <<EOF
-your: commit subject line (max 50 chars)
+your: commit subject line (max 80 chars)
 
 Detailed description of what changed and why.
 
@@ -84,9 +85,9 @@ AI-Agent: Claude-Code
 AI-Session-ID: $AI_SESSION
 AI-Task-Type: implement
 AI-Context-Tokens: ~45000
+AI-Handoff-From: none
 AI-Handoff-To: none
 AI-Thought-Trace: .ai-traces/$AI_SESSION.md
-
 Generated-by: Claude AI
 Signed-off-by: Your Name <email@example.com>
 EOF
@@ -190,23 +191,27 @@ sessions. This is sustainable for years of development without cleanup.
 **MANDATORY** fields (enforced by hook):
 
 ```
-Subject: one line summary (max 50 chars)
+Subject: one line summary (max 80 chars)
 
 Body: detailed explanation in plain English (NOT shopping lists)
 
 AI-Agent: <Claude-Code|ChatGPT-Codex|Gemini-CLI>
 AI-Session-ID: <YYYY-MM-DD-HHMMSS-AI-NAME>
-AI-Task-Type: <design|implement|debug|refactor|test|build|docs>
+AI-Task-Type: <design|implement|debug|refactor|test|build|docs|benchmark|perf>
 AI-Context-Tokens: <approximate tokens used>
 AI-Handoff-From: <previous session ID or "none">
 AI-Handoff-To: <next session ID or "none">
 AI-Thought-Trace: <path to trace file or "none">
-
 Generated-by: <AI Name>
 Signed-off-by: <Human Name> <email>
 ```
 
 **The hook will FAIL the commit if any required field is missing.**
+
+The full old MACP block is the required AI-authored commit shape. The
+two-line `Generated-by` plus `Signed-off-by` shortcut is not MACP. For
+Codex-authored commits, use `AI-Agent: ChatGPT-Codex` and
+`Generated-by: ChatGPT-Codex` exactly.
 
 ### Extension: in-band MCP-agent consultation (v1.1)
 

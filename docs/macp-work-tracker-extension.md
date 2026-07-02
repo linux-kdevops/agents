@@ -247,8 +247,7 @@ Work-Item: RUSH-123
 Work-Role: source
 Work-Visibility: private-context
 Work-Resolution: fixed
-
-Generated-by: ChatGPT Codex
+Generated-by: ChatGPT-Codex
 Signed-off-by: Luis Chamberlain <mcgrof@kernel.org>
 ```
 

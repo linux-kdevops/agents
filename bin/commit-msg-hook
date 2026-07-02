@@ -292,16 +292,29 @@ if [ -n "$AI_AGENT" ]; then
     esac
 fi
 
+GENERATED_BY=$(echo "$COMMIT_MSG" | grep "^Generated-by:" | head -1 | \
+    cut -d: -f2- | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+if [ "$GENERATED_BY" = "GPT-5 Codex" ]; then
+    echo -e "${RED}❌ Use Generated-by: ChatGPT-Codex for Codex commits${NC}"
+    ((ERRORS++))
+fi
+if [ "$AI_AGENT" = "ChatGPT-Codex" ] &&
+   [ "$GENERATED_BY" != "ChatGPT-Codex" ]; then
+    echo -e "${RED}❌ Codex commits need Generated-by: ChatGPT-Codex${NC}"
+    ((ERRORS++))
+fi
+
 # Validate AI-Task-Type value
 AI_TASK_TYPE=$(echo "$COMMIT_MSG" | grep "^AI-Task-Type:" | cut -d: -f2- | tr -d ' ')
 if [ -n "$AI_TASK_TYPE" ]; then
     case "$AI_TASK_TYPE" in
-        design|implement|debug|refactor|test|build|docs)
+        design|implement|debug|refactor|test|build|docs|benchmark|perf)
             echo -e "${GREEN}✓ AI-Task-Type: $AI_TASK_TYPE${NC}"
             ;;
         *)
             echo -e "${RED}❌ Invalid AI-Task-Type: $AI_TASK_TYPE${NC}"
-            echo -e "${YELLOW}   Must be: design, implement, debug, refactor, test, build, or docs${NC}"
+            echo -e "${YELLOW}   Must be: design, implement, debug, refactor,${NC}"
+            echo -e "${YELLOW}   test, build, docs, benchmark, or perf${NC}"
             ((ERRORS++))
             ;;
     esac
@@ -353,7 +366,6 @@ if [ $ERRORS -gt 0 ]; then
     echo "AI-Handoff-From: none"
     echo "AI-Handoff-To: none"
     echo "AI-Thought-Trace: none"
-    echo ""
     echo "Generated-by: Claude AI"
     echo "Signed-off-by: Your Name <email@example.com>"
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

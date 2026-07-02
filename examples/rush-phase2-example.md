@@ -71,7 +71,7 @@ AI-Handoff-From: 2025-10-28-140000-Claude-Code
 AI-Handoff-To: 2025-10-28-145000-Gemini-CLI
 AI-Thought-Trace: none
 
-Generated-by: ChatGPT
+Generated-by: ChatGPT-Codex
 Signed-off-by: Luis Chamberlain <mcgrof@kernel.org>
 EOF
 )"

@@ -25,7 +25,6 @@ AI-Context-Tokens: ~10000
 AI-Handoff-From: none
 AI-Handoff-To: none
 AI-Thought-Trace: none
-
 Generated-by: Claude AI
 Signed-off-by: Your Name <email@example.com>
 EOF
@@ -84,7 +83,8 @@ ai-session current
 The commit-msg hook checks:
 - ✅ AI-Agent (Claude-Code | ChatGPT-Codex | Gemini-CLI)
 - ✅ AI-Session-ID (format: YYYY-MM-DD-HHMMSS-AI-NAME)
-- ✅ AI-Task-Type (design | implement | debug | refactor | test | build | docs)
+- ✅ AI-Task-Type (design | implement | debug | refactor | test | build |
+  docs | benchmark | perf)
 - ✅ AI-Context-Tokens (approximate count)
 - ✅ AI-Handoff-From (previous session or "none")
 - ✅ AI-Handoff-To (next session or "none")
@@ -122,7 +122,6 @@ AI-Context-Tokens: ~75000
 AI-Handoff-From: none
 AI-Handoff-To: none
 AI-Thought-Trace: .ai-traces/2025-10-28-173000-Claude-Code.md
-
 Generated-by: Claude AI
 Signed-off-by: Luis Chamberlain <mcgrof@kernel.org>
 ```
@@ -185,7 +184,6 @@ AI-Context-Tokens: ~500
 AI-Handoff-From: none
 AI-Handoff-To: none
 AI-Thought-Trace: none
-
 Generated-by: Claude AI
 Signed-off-by: Your Name <email@example.com>
 EOF

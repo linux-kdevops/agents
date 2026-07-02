@@ -19,23 +19,27 @@ that want AI collaboration with proper accounting and handoffs.
 All commits to this project MUST follow MACP format (we practice what we preach):
 
 ```
-subject: brief description (max 50 chars)
+subject: brief description (max 80 chars)
 
 Detailed description in plain English explaining what changed and why.
 
 AI-Agent: Claude-Code
 AI-Session-ID: YYYY-MM-DD-HHMMSS-AI-NAME
-AI-Task-Type: design|implement|debug|refactor|test|build|docs
+AI-Task-Type: design|implement|debug|refactor|test|build|docs|benchmark|perf
 AI-Context-Tokens: ~XXXXX
 AI-Handoff-From: previous-session-id or "none"
 AI-Handoff-To: next-session-id or "none"
 AI-Thought-Trace: path/to/trace.md or "none"
-
-Generated-by: Claude AI | ChatGPT | Gemini | etc.
+Generated-by: Claude AI | ChatGPT-Codex | Gemini | etc.
 Signed-off-by: Human Name <email@example.com>
 ```
 
 **Enforcement**: The commit-msg hook validates all 9 required fields.
+
+The full old MACP block is required for AI-authored commits. Do not reduce
+the commit log to only `Generated-by` and `Signed-off-by`. For
+Codex-authored commits, use `AI-Agent: ChatGPT-Codex` and
+`Generated-by: ChatGPT-Codex` exactly.
 
 **AI attribution = `Generated-by`, once.** Record the AI that generated the
 change in `Generated-by` (name the model explicitly, e.g. `Claude Opus 4.8
@@ -50,8 +54,9 @@ co-author. The `🤖 Generated with [Claude Code]` auto-footer is never used.
 When the primary assistant consults a second model in-band (e.g. Claude Code
 calling Codex over an MCP server), record the consultation — including its real
 token cost, read from the model's usage receipt rather than its self-report —
-with `MCP-*` and `Collab-*` trailers above the `Generated-by`/`Signed-off-by`
-pair. This MCP-agent extension (dual-plan generate→grade→merge loop, fixed
+with `MCP-*` and `Collab-*` trailers between `AI-Thought-Trace` and the
+final `Generated-by`/`Signed-off-by` pair. This MCP-agent extension (dual-plan
+generate→grade→merge loop, fixed
 grading rubric, git-derived ledger) is documented in
 [`docs/mcp-agent-extension.md`](docs/mcp-agent-extension.md). The base
 commit-msg hook is unchanged; the extension's trailers are produced
@@ -175,7 +180,6 @@ AI-Context-Tokens: ~1000
 AI-Handoff-From: none
 AI-Handoff-To: none
 AI-Thought-Trace: none
-
 Generated-by: Claude AI
 Signed-off-by: Test User <test@example.com>
 EOF
