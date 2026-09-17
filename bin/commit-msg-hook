@@ -248,6 +248,46 @@ validate_skill_evolution() {
     done < <(echo "$COMMIT_MSG" | grep -n "^Skill-")
 }
 
+# Codex totals are cumulative over a thread, not estimates. Verify the exact
+# rollout event so copied or stale AI-Context-Tokens cannot pass as receipts.
+validate_codex_receipt() {
+    [ "$AI_AGENT" = "ChatGPT-Codex" ] || return 0
+
+    local server model session receipt usage tokens helper candidate
+    server=$(echo "$COMMIT_MSG" | grep "^MCP-Server:" | head -1 | cut -d: -f2- | xargs)
+    model=$(echo "$COMMIT_MSG" | grep "^MCP-Model:" | head -1 | cut -d: -f2- | xargs)
+    session=$(echo "$COMMIT_MSG" | grep "^MCP-Session-ID:" | head -1 | cut -d: -f2- | xargs)
+    receipt=$(echo "$COMMIT_MSG" | grep "^MCP-Usage-Receipt:" | head -1 | cut -d: -f2- | xargs)
+    usage=$(echo "$COMMIT_MSG" | grep "^MCP-Token-Usage:" | head -1 | cut -d: -f2- | xargs)
+    tokens=$(echo "$COMMIT_MSG" | grep "^AI-Context-Tokens:" | head -1 | cut -d: -f2- | xargs)
+
+    if [ "$server" != "codex" ] || [ -z "$model" ] || [ -z "$session" ] ||
+       [ -z "$receipt" ] || [ -z "$usage" ] || ! [[ "$tokens" =~ ^[0-9]+$ ]]; then
+        echo -e "${RED}❌ Codex commits need an exact MCP rollout receipt and integer AI-Context-Tokens${NC}"
+        ((ERRORS++))
+        return 0
+    fi
+
+    helper="${MACP_CODEX_USAGE_HELPER:-}"
+    if [ -z "$helper" ]; then
+        for candidate in "$(dirname "$0")/macp-codex-usage.sh" \
+                         "$HOME/devel/agents/bin/macp-codex-usage.sh" \
+                         "scripts/macp-codex-usage.sh"; do
+            if [ -x "$candidate" ]; then
+                helper="$candidate"
+                break
+            fi
+        done
+    fi
+    if [ -z "$helper" ] || ! "$helper" "$session" --verify "$receipt" \
+        "$model" "$usage" "$tokens"; then
+        echo -e "${RED}❌ Codex receipt cannot be verified; regenerate with macp-codex-usage.sh --commit-trailers${NC}"
+        ((ERRORS++))
+    else
+        echo -e "${GREEN}✓ Codex rollout receipt is exact${NC}"
+    fi
+}
+
 # Skip check for merge commits
 if echo "$COMMIT_MSG" | grep -q "^Merge"; then
     echo -e "${GREEN}✓ Merge commit - skipping MACP validation${NC}"
@@ -330,6 +370,7 @@ fi
 validate_work_tracker
 validate_memory_source
 validate_skill_evolution
+validate_codex_receipt
 
 # Check for "Generated-by" and "Signed-off-by" order
 GENBY_LINE=$(echo "$COMMIT_MSG" | grep -n "^Generated-by:" | cut -d: -f1)

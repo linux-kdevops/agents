@@ -90,7 +90,7 @@ base hook requires):
 MCP-Server: <server name, e.g. codex>
 MCP-Model: <model + cli version, e.g. gpt-5.5 (codex-cli 0.134.0)>
 MCP-Session-ID: <thread/session id>
-MCP-Usage-Receipt: <server>-rollout:<relative path to the receipt file>
+MCP-Usage-Receipt: codex-rollout:<relative path>#ordinal=<event ordinal>
 MCP-Token-Usage: input=<N> cached_input=<N> output=<N> reasoning_output=<N> total=<N>
 Collab-Method: dual-plan-grade | single-consult | review-only
 Collab-Plan-ID: <YYYY-MM-DD-task-slug>
@@ -103,17 +103,26 @@ last four `Collab-*` lines are present only for the full `dual-plan-grade`
 method; the lightweight modes carry just the `MCP-*` receipt lines and
 `Collab-Method`. `total` in `MCP-Token-Usage` is the credit unit; break out
 `cached_input` and `reasoning_output` because they bill differently from
-fresh input/output.
+fresh input/output. The `#ordinal=<N>` suffix binds the receipt to one
+immutable `token_count` event, rather than to the session's changing latest
+total.
 
 ## 3. Mechanical capture, fail-closed (NO-STUBS)
 
 A helper script locates the one rollout/usage file for a session and emits the
-model, version, receipt path, and final cumulative token usage — ready to
+model, version, receipt path, event ordinal, and cumulative token usage — ready to
 paste as trailers. It must **fail closed**: exit non-zero with no output if
 the receipt is missing, ambiguous, or lacks usage data, so a commit preflight
 refuses rather than records a fiction. This is the NO-STUBS guarantee: token
 values are never invented. (Reference implementation in the adopting project,
-e.g. `scripts/macp-codex-usage.sh <session-id> --trailers`.)
+e.g. `bin/macp-codex-usage.sh <thread-id> --commit-trailers`.)
+
+For `AI-Agent: ChatGPT-Codex`, use `--commit-trailers`, not a hand-maintained
+approximation. Its first line is the required `AI-Context-Tokens` value and it
+equals `total` from the same immutable event. That number is cumulative for
+the Codex thread at receipt time; it is neither per request nor per commit.
+The full hook re-reads that exact event during `git commit` and rejects a
+copied, stale, or guessed value.
 
 ## 4. Dual-plan generate → grade → merge → re-grade
 

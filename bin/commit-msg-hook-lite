@@ -215,6 +215,28 @@ if printf '%s\n' "$CONTENT" | grep -q '^MCP-Server:'; then
   done
 fi
 
+AI_AGENT="$(field_value AI-Agent)"
+if [ "$AI_AGENT" = "ChatGPT-Codex" ]; then
+  MCP_SERVER="$(field_value MCP-Server)"
+  MCP_MODEL="$(field_value MCP-Model)"
+  MCP_SESSION="$(field_value MCP-Session-ID)"
+  MCP_RECEIPT="$(field_value MCP-Usage-Receipt)"
+  MCP_USAGE="$(field_value MCP-Token-Usage)"
+  CONTEXT_TOKENS="$(field_value AI-Context-Tokens)"
+  helper="${MACP_CODEX_USAGE_HELPER:-}"
+  if [ -z "$helper" ]; then
+    for candidate in "$(dirname "$0")/macp-codex-usage.sh" \
+      "$HOME/devel/agents/bin/macp-codex-usage.sh" scripts/macp-codex-usage.sh; do
+      [ -x "$candidate" ] && { helper="$candidate"; break; }
+    done
+  fi
+  if [ "$MCP_SERVER" != "codex" ] || ! printf '%s' "$CONTEXT_TOKENS" | grep -qE '^[0-9]+$' || \
+     [ -z "$helper" ] || ! "$helper" "$MCP_SESSION" --verify "$MCP_RECEIPT" \
+       "$MCP_MODEL" "$MCP_USAGE" "$CONTEXT_TOKENS"; then
+    err "Codex commit needs a verified immutable rollout receipt; use macp-codex-usage.sh --commit-trailers"
+  fi
+fi
+
 validate_work_tracker
 validate_memory_source
 validate_skill_evolution

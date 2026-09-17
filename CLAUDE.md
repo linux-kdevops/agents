@@ -41,6 +41,13 @@ the commit log to only `Generated-by` and `Signed-off-by`. For
 Codex-authored commits, use `AI-Agent: ChatGPT-Codex` and
 `Generated-by: ChatGPT-Codex` exactly.
 
+For `AI-Agent: ChatGPT-Codex`, `AI-Context-Tokens` is not approximate. Run
+`bin/macp-codex-usage.sh <real-rollout-uuid> --commit-trailers` and paste its
+output above `Generated-by`. The helper records an immutable rollout event
+ordinal; the hook verifies the token total, model, session UUID, and receipt
+event together. The total is cumulative for that thread at receipt time, not
+a per-request or per-commit count. Never copy it from an earlier commit.
+
 **AI attribution = `Generated-by`, once.** Record the AI that generated the
 change in `Generated-by` (name the model explicitly, e.g. `Claude Opus 4.8
 (1M context)`, not the bare `Claude AI`). Do **not** also add a
