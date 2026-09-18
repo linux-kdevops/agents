@@ -74,7 +74,7 @@ Claude Code has registered.
 
 A consulted model's prose may misstate its own identity ("GPT-5" when it is
 `gpt-5.5`) and its own token count (a mid-turn snapshot rather than the final
-cumulative total). Do not trust what the model says about itself. MCP servers
+cumulative counter). Do not trust what the model says about itself. MCP servers
 that expose a session **rollout / usage file** (e.g. Codex writes one per
 thread under `${CODEX_HOME:-$HOME/.codex}/sessions/YYYY/MM/DD/rollout-*.jsonl`
 with `session_meta` and `token_count` events) give ground truth. Always read
@@ -90,8 +90,10 @@ base hook requires):
 MCP-Server: <server name, e.g. codex>
 MCP-Model: <model + cli version, e.g. gpt-5.5 (codex-cli 0.134.0)>
 MCP-Session-ID: <thread/session id>
+MCP-Usage-Baseline: codex-rollout:<relative path>#ordinal=<previous event>|none
 MCP-Usage-Receipt: codex-rollout:<relative path>#ordinal=<event ordinal>
 MCP-Token-Usage: input=<N> cached_input=<N> output=<N> reasoning_output=<N> total=<N>
+MCP-Thread-Token-Usage: input=<N> cached_input=<N> output=<N> reasoning_output=<N> total=<N>
 Collab-Method: dual-plan-grade | single-consult | review-only
 Collab-Plan-ID: <YYYY-MM-DD-task-slug>
 Collab-Plan-Scores: primary=<x.x> consulted=<x.x> merged=<x.x>
@@ -101,17 +103,18 @@ Collab-Plan-Winner: primary | consulted | merged
 The `MCP-*` lines are produced mechanically (section 3), never by hand. The
 last four `Collab-*` lines are present only for the full `dual-plan-grade`
 method; the lightweight modes carry just the `MCP-*` receipt lines and
-`Collab-Method`. `total` in `MCP-Token-Usage` is the credit unit; break out
-`cached_input` and `reasoning_output` because they bill differently from
-fresh input/output. The `#ordinal=<N>` suffix binds the receipt to one
-immutable `token_count` event, rather than to the session's changing latest
-total.
+`Collab-Method`. `MCP-Token-Usage` is the exact delta between the baseline and
+receipt events; its `total` is the credit unit. `MCP-Thread-Token-Usage` keeps
+the receipt event's raw cumulative counter. Break out `cached_input` and
+`reasoning_output` because they bill differently from fresh input/output. The
+paired ordinals bind both values to immutable `token_count` events.
 
 ## 3. Mechanical capture, fail-closed (NO-STUBS)
 
 A helper script locates the one rollout/usage file for a session and emits the
-model, version, receipt path, event ordinal, and cumulative token usage — ready to
-paste as trailers. It must **fail closed**: exit non-zero with no output if
+model, version, paired receipt ordinals, exact token-count delta, and raw
+cumulative token usage, ready to paste as trailers. It must **fail closed**:
+exit non-zero with no output if
 the receipt is missing, ambiguous, or lacks usage data, so a commit preflight
 refuses rather than records a fiction. This is the NO-STUBS guarantee: token
 values are never invented. (Reference implementation in the adopting project,
@@ -119,10 +122,11 @@ e.g. `bin/macp-codex-usage.sh <thread-id> --commit-trailers`.)
 
 For `AI-Agent: ChatGPT-Codex`, use `--commit-trailers`, not a hand-maintained
 approximation. Its first line is the required `AI-Context-Tokens` value and it
-equals `total` from the same immutable event. That number is cumulative for
-the Codex thread at receipt time; it is neither per request nor per commit.
-The full hook re-reads that exact event during `git commit` and rejects a
-copied, stale, or guessed value.
+equals the delta total between paired immutable events. The raw cumulative
+counter is retained separately in `MCP-Thread-Token-Usage`. This is the
+finest inference-accounting unit Codex exposes, not a claim about a physical
+GPU forward pass. The full hook re-reads both events during `git commit` and
+rejects a copied, stale, or guessed value.
 
 ## 4. Dual-plan generate → grade → merge → re-grade
 

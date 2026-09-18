@@ -248,21 +248,24 @@ validate_skill_evolution() {
     done < <(echo "$COMMIT_MSG" | grep -n "^Skill-")
 }
 
-# Codex totals are cumulative over a thread, not estimates. Verify the exact
-# rollout event so copied or stale AI-Context-Tokens cannot pass as receipts.
+# Codex token_count values are cumulative. New receipts must pin and verify a
+# delta from the preceding token_count event plus the raw cumulative vector.
 validate_codex_receipt() {
     [ "$AI_AGENT" = "ChatGPT-Codex" ] || return 0
 
-    local server model session receipt usage tokens helper candidate
+    local server model session receipt usage thread_usage baseline tokens helper candidate
     server=$(echo "$COMMIT_MSG" | grep "^MCP-Server:" | head -1 | cut -d: -f2- | xargs)
     model=$(echo "$COMMIT_MSG" | grep "^MCP-Model:" | head -1 | cut -d: -f2- | xargs)
     session=$(echo "$COMMIT_MSG" | grep "^MCP-Session-ID:" | head -1 | cut -d: -f2- | xargs)
     receipt=$(echo "$COMMIT_MSG" | grep "^MCP-Usage-Receipt:" | head -1 | cut -d: -f2- | xargs)
     usage=$(echo "$COMMIT_MSG" | grep "^MCP-Token-Usage:" | head -1 | cut -d: -f2- | xargs)
+    thread_usage=$(echo "$COMMIT_MSG" | grep "^MCP-Thread-Token-Usage:" | head -1 | cut -d: -f2- | xargs)
+    baseline=$(echo "$COMMIT_MSG" | grep "^MCP-Usage-Baseline:" | head -1 | cut -d: -f2- | xargs)
     tokens=$(echo "$COMMIT_MSG" | grep "^AI-Context-Tokens:" | head -1 | cut -d: -f2- | xargs)
 
     if [ "$server" != "codex" ] || [ -z "$model" ] || [ -z "$session" ] ||
-       [ -z "$receipt" ] || [ -z "$usage" ] || ! [[ "$tokens" =~ ^[0-9]+$ ]]; then
+       [ -z "$receipt" ] || [ -z "$usage" ] || [ -z "$thread_usage" ] ||
+       [ -z "$baseline" ] || ! [[ "$tokens" =~ ^[0-9]+$ ]]; then
         echo -e "${RED}❌ Codex commits need an exact MCP rollout receipt and integer AI-Context-Tokens${NC}"
         ((ERRORS++))
         return 0
@@ -280,7 +283,7 @@ validate_codex_receipt() {
         done
     fi
     if [ -z "$helper" ] || ! "$helper" "$session" --verify "$receipt" \
-        "$model" "$usage" "$tokens"; then
+        "$model" "$usage" "$tokens" "$thread_usage" "$baseline"; then
         echo -e "${RED}❌ Codex receipt cannot be verified; regenerate with macp-codex-usage.sh --commit-trailers${NC}"
         ((ERRORS++))
     else

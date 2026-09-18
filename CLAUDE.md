@@ -43,10 +43,11 @@ Codex-authored commits, use `AI-Agent: ChatGPT-Codex` and
 
 For `AI-Agent: ChatGPT-Codex`, `AI-Context-Tokens` is not approximate. Run
 `bin/macp-codex-usage.sh <real-rollout-uuid> --commit-trailers` and paste its
-output above `Generated-by`. The helper records an immutable rollout event
-ordinal; the hook verifies the token total, model, session UUID, and receipt
-event together. The total is cumulative for that thread at receipt time, not
-a per-request or per-commit count. Never copy it from an earlier commit.
+output above `Generated-by`. The helper records immutable end and baseline
+event ordinals; the hook verifies the delta, cumulative vector, model, session
+UUID, and both receipt events together. `AI-Context-Tokens` is the delta
+between adjacent runtime `token_count` events. `MCP-Thread-Token-Usage` keeps
+the raw cumulative vector for audit. Never copy either from an earlier commit.
 
 **AI attribution = `Generated-by`, once.** Record the AI that generated the
 change in `Generated-by` (name the model explicitly, e.g. `Claude Opus 4.8
